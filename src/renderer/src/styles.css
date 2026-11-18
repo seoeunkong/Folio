@@ -19,6 +19,8 @@
   --holiday-fg: #242424;
   --holiday-name: #555555;
   --sunday-bg: #f8f8f8;
+  /* 위젯 주간 테마 문구 */
+  --theme-fg: #262626;
   --serif: 'Baskerville Old Face', 'Libre Baskerville', Georgia, 'Malgun Gothic', serif;
   --sans: 'Pretendard', 'Malgun Gothic', 'Segoe UI', system-ui, sans-serif;
   color-scheme: light;
@@ -39,8 +41,19 @@
     --holiday-fg: #e4e3de;
     --holiday-name: #a6a5a0;
     --sunday-bg: #1a1a19;
+    --theme-fg: #e4e3de;
     color-scheme: dark;
   }
+}
+
+/* 마루 부리 Regular(네이버, SIL OFL 1.1). 공식 OTF를 수정 없이 앱에 포함 — 라이선스: resources/fonts/MaruBuri-LICENSE.txt
+ * 위젯 주간 테마 문구(.theme-words)에서만 쓴다. 글꼴은 쓰는 요소가 있을 때만 불러온다. */
+@font-face {
+  font-family: 'MaruBuri';
+  src: url('./assets/fonts/MaruBuri-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }
 
 * { box-sizing: border-box; }
@@ -154,9 +167,13 @@ body[data-view='widget'] { border: 1px solid var(--line); overflow: hidden; }
 .widget-head .weekday { color: var(--muted); }
 .widget-head .count { font-size: 12px; }
 /* 위젯 주간 테마: 작은 회색 라벨(THEME) + 선명한 세리프 문구. 긴 문구는 문구 칸 안에서 단어 단위로 줄바꿈 */
-.theme-line { display: flex; align-items: baseline; gap: 10px; margin: 0; padding: 8px 14px 6px; }
+.theme-line { display: flex; align-items: baseline; gap: 12px; margin: 0; padding: 7px 14px 5px; }
 .theme-label { flex: none; font: 600 10px/1 var(--sans); letter-spacing: 0.08em; color: var(--muted); }
-.theme-words { flex: 1; min-width: 0; font: 13px/1.4 var(--serif); color: var(--fg); word-break: keep-all; overflow-wrap: anywhere; }
+/* 불러오지 못하면 Windows 기본 명조(바탕) → 기존 세리프 순으로 대체 */
+.theme-words {
+  flex: 1; min-width: 0; font: 400 15px/1.5 'MaruBuri', 'Batang', '바탕', var(--serif); color: var(--theme-fg);
+  word-break: keep-all; overflow-wrap: anywhere;
+}
 .widget-body { flex: 1; overflow-y: auto; }
 .widget-foot { flex: none; }
 

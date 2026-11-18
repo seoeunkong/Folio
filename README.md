@@ -17,6 +17,12 @@ npm run dist       # 설치 파일 dist\Folio Setup <버전>.exe
 `FOLIO_USER_DATA=<폴더>`를 주면 실제 데이터 대신 그 폴더를 씁니다.
 처음 실행할 때 `%APPDATA%\Folio`에 DB가 없고 이전 이름의 `%APPDATA%\TodoCalendar\data.db`가 있으면 복사해 옵니다(원본은 남김).
 
+## 글꼴
+
+위젯의 주간 테마 문구에만 네이버 **마루 부리 Regular**를 쓴다. 공식 배포본([hangeul.naver.com/font](https://hangeul.naver.com/font)의 `maruburi.zip`)의 OTF를 수정하지 않고 `src/renderer/src/assets/fonts/`에 넣었다.
+SIL Open Font License 1.1(예약 글꼴 이름 MaruBuri)이므로 서브셋·형식 변환을 하면 이름을 바꿔야 한다. 저작권 안내와 라이선스 전문은 `resources/fonts/MaruBuri-LICENSE.txt`이며 설치본에 함께 들어간다.
+불러오지 못하면 바탕 → 기존 세리프 순으로 대체한다.
+
 ## 구조
 
 | 위치 | 역할 |
