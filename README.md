@@ -3,6 +3,27 @@
 하루의 작업과 생각이 쌓이는 나만의 기록집. Windows에서 항상 띄워두는 개인용 할 일·주간 목표 위젯입니다.
 설계: [설계안](https://claude.ai/artifact/WKqpmTa66byTrA1TQusGgm) (작성 당시 이름 TodoCalendar)
 
+## 설치 (개발 도구 없이)
+
+1. [Releases](https://github.com/seoeunkong/Folio/releases/latest)에서 `Folio-Setup-<버전>.exe`를 내려받아 실행한다. 사용자 폴더에 바로 설치되며 관리자 권한이 필요 없다.
+2. 코드 서명이 없어 처음 실행할 때 "Windows의 PC 보호" 창이 뜨면 **추가 정보 → 실행**을 누른다.
+3. 데이터는 그 PC의 `%APPDATA%\Folio\data.db`에 따로 저장된다(PC 사이에 동기화되지 않음).
+
+## 업데이트
+
+설치본은 시작할 때와 6시간마다 Releases의 새 버전을 확인해 백그라운드로 내려받는다. 다 받으면 알림이 뜨고,
+트레이 메뉴의 **업데이트 설치 후 다시 시작**을 누르거나 다음에 종료할 때 설치된다. 데이터는 그대로 남는다.
+자동 업데이트가 막힌 환경(회사 방화벽 등)에서는 Releases에서 새 설치 파일을 받아 실행하면 덮어 설치된다.
+
+## 새 버전 배포
+
+```sh
+npm version patch          # package.json 버전을 올리고 커밋 + 태그(v0.2.1 등)를 만든다
+git push --follow-tags     # 태그가 올라가면 GitHub Actions가 테스트 → 설치 파일 빌드 → Releases 게시
+```
+
+워크플로: `.github/workflows/release.yml`. 태그와 `package.json` 버전이 다르면 빌드하지 않는다.
+
 ## 실행
 
 ```sh

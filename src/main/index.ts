@@ -6,6 +6,7 @@ import { toYmd } from '../core/dates'
 import { API_METHODS, MUTATING_METHODS, type Prefs, type ThemeSource, type TodoApi } from '../shared/types'
 import { getSetting, openDb, setSetting } from './db'
 import { TaskService } from './taskService'
+import { installUpdateNow, setupAutoUpdate } from './updater'
 import { Windows } from './windows'
 
 // DB 위치: %APPDATA%\Folio\data.db (개발 실행과 설치본이 같은 데이터를 쓴다)
@@ -127,16 +128,23 @@ app.whenReady().then(() => {
   wins.createWidget()
 
   tray = new Tray(nativeImage.createFromPath(icon).resize({ width: 16, height: 16 }))
-  tray.setToolTip('Folio')
-  tray.setContextMenu(
-    Menu.buildFromTemplate([
-      { label: '위젯 보이기/숨기기', click: () => wins.toggleWidget() },
-      { label: '메인 창 열기', click: () => wins.openMain() },
-      { type: 'separator' },
-      { label: '종료', click: () => app.quit() },
-    ]),
-  )
+  tray.setToolTip(`Folio ${app.getVersion()}`)
+  // 새 버전을 다 받으면 메뉴 맨 위에 '업데이트 설치 후 다시 시작'이 생긴다
+  const setTrayMenu = (readyVersion?: string) =>
+    tray?.setContextMenu(
+      Menu.buildFromTemplate([
+        ...(readyVersion
+          ? [{ label: `업데이트 설치 후 다시 시작 (${readyVersion})`, click: installUpdateNow }, { type: 'separator' as const }]
+          : []),
+        { label: '위젯 보이기/숨기기', click: () => wins.toggleWidget() },
+        { label: '메인 창 열기', click: () => wins.openMain() },
+        { type: 'separator' },
+        { label: '종료', click: () => app.quit() },
+      ]),
+    )
+  setTrayMenu()
   tray.on('click', () => wins.toggleWidget())
+  setupAutoUpdate(setTrayMenu)
 
   globalShortcut.register('Control+Alt+Space', () => wins.toggleWidget())
 
