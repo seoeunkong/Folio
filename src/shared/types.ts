@@ -11,6 +11,8 @@ export interface Task {
   goalId: number | null
   /** 연결된 목표의 제목(목록에 바로 표시하려고 함께 가져온다) */
   goalTitle: string | null
+  /** 연결된 목표가 그 주의 몇 번째 목표인지(1부터). 주간 화면의 01, 02와 같다. */
+  goalNo: number | null
   source: 'local' | 'asana'
   asanaGid: string | null
   syncState: string | null
@@ -61,6 +63,8 @@ export interface Prefs {
   widgetCollapsed: boolean
   openAtLogin: boolean
   theme: ThemeSource
+  /** 월 달력·주간 화면에 토·일요일 열을 보일지(기본은 평일만) */
+  showWeekends: boolean
 }
 
 /** preload가 window.api로 노출하는 함수들. 모두 메인 프로세스로 IPC 요청만 보낸다. */

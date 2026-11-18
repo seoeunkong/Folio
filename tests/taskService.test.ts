@@ -40,17 +40,19 @@ describe('자동 이월', () => {
 describe('주간 목표 연결', () => {
   it('다음 주로 이월돼도 목표 연결이 남고, 목표를 지우면 할 일은 남고 연결만 풀린다', () => {
     const { svc } = setup()
+    svc.addGoal('2026-11-16', '첫 목표')
     const goal = svc.addGoal('2026-11-16', '보고서 마무리')
     const t = svc.addTask('2026-11-20', '보고서 초안')
     svc.setTaskGoal(t.id, goal.id)
 
     svc.runRollover('2026-11-21') // 금요일 미완료 → 다음 주 월요일
-    expect(svc.getTask(t.id)).toMatchObject({ date: '2026-11-23', goalTitle: '보고서 마무리' })
-    expect(svc.getWeek('2026-11-16').goals[0].tasks.map((x) => x.id)).toEqual([t.id])
+    // 번호는 주간 화면 순서(두 번째 목표 = 2)와 같고, 이월돼도 원래 주 기준이다
+    expect(svc.getTask(t.id)).toMatchObject({ date: '2026-11-23', goalTitle: '보고서 마무리', goalNo: 2 })
+    expect(svc.getWeek('2026-11-16').goals[1].tasks.map((x) => x.id)).toEqual([t.id])
 
     svc.deleteGoal(goal.id)
-    expect(svc.getTask(t.id)).toMatchObject({ goalId: null, goalTitle: null })
-    expect(svc.getWeek('2026-11-16').goals).toEqual([])
+    expect(svc.getTask(t.id)).toMatchObject({ goalId: null, goalTitle: null, goalNo: null })
+    expect(svc.getWeek('2026-11-16').goals.map((g) => g.title)).toEqual(['첫 목표'])
   })
 })
 

@@ -62,6 +62,7 @@ app.whenReady().then(() => {
     widgetCollapsed: getSetting<boolean>(db, 'widget_collapsed') ?? false,
     openAtLogin: app.getLoginItemSettings().openAtLogin,
     theme: nativeTheme.themeSource,
+    showWeekends: getSetting<boolean>(db, 'show_weekends') ?? false,
   })
   const setPrefs = (p: Partial<Prefs>): Prefs => {
     if (p.widgetOpacity !== undefined) {
@@ -75,6 +76,7 @@ app.whenReady().then(() => {
     }
     if (p.widgetCollapsed !== undefined) wins.setWidgetCollapsed(p.widgetCollapsed)
     if (p.openAtLogin !== undefined) app.setLoginItemSettings({ openAtLogin: p.openAtLogin })
+    if (p.showWeekends !== undefined) setSetting(db, 'show_weekends', p.showWeekends)
     if (p.theme !== undefined) {
       setSetting(db, 'theme', p.theme)
       nativeTheme.themeSource = p.theme

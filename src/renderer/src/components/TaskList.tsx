@@ -7,6 +7,10 @@ import type { Task } from '../../../shared/types'
 import { weekStartOf } from '../../../core/dates'
 import { useWeek } from '../hooks'
 import { CheckIcon, ChevronIcon, CloseIcon } from './Icons'
+import { GoalMark, goalNoText } from './GoalMark'
+
+/** 체크한 할 일이 제자리에 남아 있는 시간. 그 뒤 완료 묶음으로 내려간다. */
+const LINGER_MS = 1200
 
 interface Props {
   tasks: Task[]
@@ -38,26 +42,50 @@ export function dropOnTask(tasks: Task[], setTasks: Props['setTasks'], activeId:
 }
 
 export function TaskList({ tasks, setTasks, withNotes = false, doneOpenByDefault = false, bare = false }: Props) {
-  const undone = tasks.filter((t) => !t.done)
-  const done = tasks.filter((t) => t.done)
   const [doneOpen, setDoneOpen] = useState(doneOpenByDefault)
   const [expanded, setExpanded] = useState<number | null>(null)
+  // 방금 체크해 제자리에 잠깐 남겨 둔 할 일: id → 체크할 때 미완료 목록에서의 위치
+  const [lingering, setLingering] = useState<ReadonlyMap<number, number>>(new Map())
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
+
+  const undone = tasks.filter((t) => !t.done)
+  const done = tasks.filter((t) => t.done && !lingering.has(t.id))
+  // 화면에 보이는 진행 목록 = 미완료 + 방금 체크한 것(원래 자리에)
+  const active = [...undone]
+  for (const t of tasks.filter((x) => x.done && lingering.has(x.id)).sort((a, b) => lingering.get(a.id)! - lingering.get(b.id)!))
+    active.splice(Math.min(lingering.get(t.id)!, active.length), 0, t)
+
+  /** DB에는 바로 저장하고, 화면에서만 잠깐 제자리에 둔다. 그 사이 창을 닫아도 완료는 남는다. */
+  const toggleDone = (task: Task) => {
+    if (!task.done) {
+      const at = active.findIndex((t) => t.id === task.id)
+      setLingering((m) => new Map(m).set(task.id, at))
+      setTasks((ts) => ts?.map((t) => (t.id === task.id ? { ...t, done: true } : t)))
+      window.setTimeout(() => {
+        setLingering((m) => {
+          const n = new Map(m)
+          n.delete(task.id)
+          return n
+        })
+      }, LINGER_MS)
+    }
+    void window.api.setDone(task.id, !task.done)
+  }
 
   const move = (id: number, toIndex: number) => reorderTask(tasks, setTasks, id, toIndex)
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     if (over) dropOnTask(tasks, setTasks, Number(active.id), Number(over.id))
   }
 
-  const onRowKey = (e: KeyboardEvent<HTMLLIElement>, task: Task, index: number) => {
+  const onRowKey = (e: KeyboardEvent<HTMLLIElement>, task: Task) => {
     if (e.target !== e.currentTarget) return
-    const rows = () => [...(e.currentTarget.parentElement?.parentElement?.querySelectorAll<HTMLElement>('li.task') ?? [])]
+    const rows = () => [...(e.currentTarget.closest('.task-list')?.querySelectorAll<HTMLElement>('li.task') ?? [])]
     if (e.key === ' ') {
       e.preventDefault()
-      void window.api.setDone(task.id, !task.done)
+      toggleDone(task)
     } else if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && !task.done) {
       e.preventDefault()
-      move(task.id, index + (e.key === 'ArrowUp' ? -1 : 1))
+      move(task.id, undone.findIndex((t) => t.id === task.id) + (e.key === 'ArrowUp' ? -1 : 1))
     } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       e.preventDefault()
       const all = rows()
@@ -65,19 +93,21 @@ export function TaskList({ tasks, setTasks, withNotes = false, doneOpenByDefault
     }
   }
 
+  const rowProps = (t: Task) => ({
+    task: t,
+    withNotes,
+    expanded: expanded === t.id,
+    onToggleExpand: () => setExpanded(expanded === t.id ? null : t.id),
+    onToggleDone: () => toggleDone(t),
+    onKeyDown: (e: KeyboardEvent<HTMLLIElement>) => onRowKey(e, t),
+  })
+
   const sortable = (
     <SortableContext items={undone.map((t) => t.id)} strategy={verticalListSortingStrategy}>
       <ul>
-        {undone.map((t, i) => (
-          <SortableRow
-            key={t.id}
-            task={t}
-            withNotes={withNotes}
-            expanded={expanded === t.id}
-            onToggleExpand={() => setExpanded(expanded === t.id ? null : t.id)}
-            onKeyDown={(e) => onRowKey(e, t, i)}
-          />
-        ))}
+        {active.map((t) =>
+          t.done ? <Row key={t.id} {...rowProps(t)} expanded={false} /> : <SortableRow key={t.id} {...rowProps(t)} />,
+        )}
       </ul>
     </SortableContext>
   )
@@ -91,21 +121,19 @@ export function TaskList({ tasks, setTasks, withNotes = false, doneOpenByDefault
           {sortable}
         </DndContext>
       )}
-      {undone.length === 0 && <p className="empty">할 일이 없습니다</p>}
+      {active.length === 0 && <p className="empty">할 일이 없습니다</p>}
 
+      {/* 완료 묶음: 같은 목록의 마지막 줄. 누르면 그 아래로 펼친다. */}
       {done.length > 0 && (
-        <section className="done">
-          <button className="done-toggle" onClick={() => setDoneOpen(!doneOpen)}>
-            <ChevronIcon open={doneOpen} /> 완료 {done.length}
-          </button>
-          {doneOpen && (
-            <ul>
-              {done.map((t, i) => (
-                <Row key={t.id} task={t} withNotes={withNotes} expanded={false} onKeyDown={(e) => onRowKey(e, t, i)} />
-              ))}
-            </ul>
-          )}
-        </section>
+        <ul className="done-group">
+          <li>
+            <button className="done-toggle" aria-expanded={doneOpen} onClick={() => setDoneOpen(!doneOpen)}>
+              <span className="done-check">✓</span> 완료 <span className="num">{done.length}</span>
+              <ChevronIcon open={doneOpen} />
+            </button>
+          </li>
+          {doneOpen && done.map((t) => <Row key={t.id} {...rowProps(t)} expanded={false} />)}
+        </ul>
       )}
     </div>
   )
@@ -116,6 +144,7 @@ interface RowProps {
   withNotes: boolean
   expanded: boolean
   onToggleExpand?: () => void
+  onToggleDone: () => void
   onKeyDown: (e: KeyboardEvent<HTMLLIElement>) => void
 }
 
@@ -146,6 +175,7 @@ function Row({
   withNotes,
   expanded,
   onToggleExpand,
+  onToggleDone,
   onKeyDown,
   editing: editingProp,
   setEditing: setEditingProp,
@@ -187,7 +217,7 @@ function Row({
           className="check"
           aria-label={task.done ? '완료 취소' : '완료'}
           onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => void window.api.setDone(task.id, !task.done)}
+          onClick={onToggleDone}
         >
           {task.done && <CheckIcon />}
         </button>
@@ -209,7 +239,7 @@ function Row({
             {task.title}
             {task.goalTitle && (
               <span className="goal-tag">
-                <span className="goal-mark">◆</span> {task.goalTitle}
+                <GoalMark no={task.goalNo} /> {task.goalTitle}
               </span>
             )}
             {task.carryCount > 0 && (
@@ -265,10 +295,14 @@ function TaskDetail({ task }: { task: Task }) {
           onChange={(e) => void window.api.setTaskGoal(task.id, e.target.value ? Number(e.target.value) : null)}
         >
           <option value="">없음</option>
-          {foreign && <option value={task.goalId!}>{task.goalTitle} (지난 주)</option>}
-          {goals.map((g) => (
+          {foreign && (
+            <option value={task.goalId!}>
+              {goalNoText(task.goalNo)} {task.goalTitle} (지난 주)
+            </option>
+          )}
+          {goals.map((g, i) => (
             <option key={g.id} value={g.id}>
-              {g.title}
+              {goalNoText(i + 1)} {g.title}
             </option>
           ))}
         </select>

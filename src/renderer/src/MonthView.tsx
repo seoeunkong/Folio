@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import {
   closestCenter,
   DndContext,
@@ -12,8 +12,9 @@ import {
 } from '@dnd-kit/core'
 import { addDays, dayOfWeek, WEEKDAY_KO, type Ymd } from '../../core/dates'
 import type { DaySummary, Holiday, Task, Week } from '../../shared/types'
-import { formatDay, useHolidays, useLive, useTasks, useToday } from './hooks'
+import { formatDay, useHolidays, useLive, usePrefs, useTasks, useToday } from './hooks'
 import { dropOnTask, TaskList } from './components/TaskList'
+import { GoalMark } from './components/GoalMark'
 import { QuickAdd } from './components/QuickAdd'
 
 const DAY = 'day:' // 달력 칸 droppable id 접두사. 할 일 id(숫자)와 구분한다.
@@ -55,6 +56,7 @@ const collision: CollisionDetection = (args) => {
 
 export function MonthView() {
   const today = useToday()
+  const prefs = usePrefs()
   const holidays = useHolidays()
   const [month, setMonth] = useState<string>()
   const [selected, setSelected] = useState<Ymd>()
@@ -77,8 +79,10 @@ export function MonthView() {
   const [dragging, setDragging] = useState<Task | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
 
-  if (!today || !month || !selected) return null
+  if (!today || !month || !selected || !prefs) return null
 
+  const showWeekends = prefs.showWeekends
+  const cols = showWeekends ? 7 : 5
   const summaryOf = new Map(summaries?.map((s) => [s.date, s]))
   const holidayOf = new Map(holidays.map((h) => [h.date, h]))
   const select = (d: Ymd) => {
@@ -129,16 +133,20 @@ export function MonthView() {
               </button>
             )}
           </header>
-          <div className="grid">
-            {HEAD.map((h, i) => (
+          <div className="grid" style={{ '--cols': cols } as CSSProperties}>
+            {HEAD.slice(0, cols).map((h, i) => (
               <div key={h} className="head" data-off={i >= 5 || undefined}>
                 {h}
               </div>
             ))}
-            {weekStarts.map((ws, w) => (
-              <Fragment key={ws}>
-                <WeekStrip week={weeks?.find((x) => x.weekStart === ws)} />
-                {cells.slice(w * 7, w * 7 + 7).map((d) => (
+            {weekStarts.map((ws, w) => {
+              const week = weeks?.find((x) => x.weekStart === ws)
+              const days = cells.slice(w * 7, w * 7 + 7)
+              // 주말을 숨기면 금요일 칸에 주말 할 일 수를 알려 할 일이 보이지 않게 묻히지 않도록 한다
+              const weekendCount = showWeekends ? 0 : days.slice(5).reduce((n, d) => n + (summaryOf.get(d)?.total ?? 0), 0)
+              return (
+              <div key={ws} className="week-row" data-cols={cols} data-strip={hasStrip(week) || undefined}>
+                {days.slice(0, cols).map((d, i) => (
                   <DayCell
                     key={d}
                     date={d}
@@ -147,11 +155,15 @@ export function MonthView() {
                     selected={d === selected}
                     summary={summaryOf.get(d)}
                     holiday={holidayOf.get(d)}
+                    weekendCount={i === 4 ? weekendCount : 0}
                     onSelect={select}
                   />
                 ))}
-              </Fragment>
-            ))}
+                {/* 칸 위에 겹쳐 그리는 막대. 클릭·드롭은 아래 칸이 받는다(pointer-events: none). */}
+                <WeekStrip week={week} />
+              </div>
+              )
+            })}
           </div>
           <p className="hint">할 일을 달력의 날짜 칸으로 끌어 놓으면 그날로 옮겨집니다. 지난 날짜로는 옮길 수 없습니다.</p>
         </section>
@@ -163,7 +175,7 @@ export function MonthView() {
             {selHoliday && <span className="tag">{selHoliday.name}</span>}
           </header>
           <QuickAdd date={selected} today={today} />
-          {tasks && <TaskList tasks={tasks} setTasks={setTasks} doneOpenByDefault bare />}
+          {tasks && <TaskList tasks={tasks} setTasks={setTasks} bare />}
         </section>
       </div>
 
@@ -179,10 +191,12 @@ interface CellProps {
   selected: boolean
   summary: DaySummary | undefined
   holiday: Holiday | undefined
+  /** 주말을 숨겼을 때 금요일 칸에 보여 줄 그 주 주말 할 일 수 */
+  weekendCount: number
   onSelect: (d: Ymd) => void
 }
 
-function DayCell({ date, inMonth, today, selected, summary, holiday, onSelect }: CellProps) {
+function DayCell({ date, inMonth, today, selected, summary, holiday, weekendCount, onSelect }: CellProps) {
   const droppable = date >= today
   const { setNodeRef, isOver } = useDroppable({ id: DAY + date, disabled: !droppable })
   const dow = dayOfWeek(date)
@@ -202,23 +216,34 @@ function DayCell({ date, inMonth, today, selected, summary, holiday, onSelect }:
     >
       <span className="day-num display">{Number(date.slice(8))}</span>
       {holiday && <span className="hname">{holiday.name}</span>}
-      {summary && <Dots summary={summary} />}
+      {(summary || weekendCount > 0) && (
+        <span className="cell-foot">
+          {summary && <Dots summary={summary} />}
+          {weekendCount > 0 && (
+            <span className="weekend-note" title="주말 할 일. 설정에서 주말 표시를 켜면 볼 수 있습니다">
+              주말 {weekendCount}
+            </span>
+          )}
+        </span>
+      )}
     </button>
   )
 }
 
-/** 주 위에 걸치는 한 줄: 그 주의 테마와 목표(연결된 할 일 완료/전체). 아무것도 없으면 그리지 않는다. */
+const hasStrip = (week: Week | undefined) => !!week && (week.theme !== '' || week.goals.length > 0)
+
+/**
+ * 주 행 안에서 월~금 평일 칸에만 걸쳐 그리는 막대: 그 주의 테마와 목표(연결된 할 일 완료).
+ * 여러 날에 걸친 일정처럼 막대가 덮는 칸이 곧 적용 기간이다. 아무것도 없으면 그리지 않는다.
+ */
 function WeekStrip({ week }: { week: Week | undefined }) {
-  if (!week || (!week.theme && week.goals.length === 0)) return null
-  const full = [week.theme, ...week.goals.map((g) => `${g.title} ${g.tasks.filter((t) => t.done).length}/${g.tasks.length}`)]
-    .filter(Boolean)
-    .join(' · ')
+  if (!week || !hasStrip(week)) return null
   return (
-    <div className="week-strip" title={full}>
+    <div className="week-strip">
       {week.theme && <span className="strip-theme">{week.theme}</span>}
-      {week.goals.map((g) => (
-        <span key={g.id} className="strip-goal">
-          <span className="goal-mark">◆</span> {g.title}{' '}
+      {week.goals.map((g, i) => (
+        <span key={g.id} className="strip-goal" title={`연결된 할 일 ${g.tasks.filter((t) => t.done).length}/${g.tasks.length} 완료`}>
+          <GoalMark no={i + 1} /> {g.title}{' '}
           <span className="num">
             {g.tasks.filter((t) => t.done).length}/{g.tasks.length}
           </span>

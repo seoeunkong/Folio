@@ -17,13 +17,20 @@ interface TaskRow {
   carry_count: number
   goal_id: number | null
   goal_title: string | null
+  goal_no: number | null
   source: 'local' | 'asana'
   asana_gid: string | null
   sync_state: string | null
 }
 
-/** 할 일을 읽는 모든 쿼리의 앞부분. 연결된 목표 제목을 함께 가져온다. */
-const TASK_SELECT = 'SELECT t.*, g.title AS goal_title FROM tasks t LEFT JOIN goals g ON g.id = t.goal_id'
+/**
+ * 할 일을 읽는 모든 쿼리의 앞부분. 연결된 목표의 제목과 번호(그 주 목표 중 몇 번째인지, 1부터)를 함께 가져온다.
+ * 번호는 주간 화면의 01, 02와 같은 기준(sort_order, id 순)이다.
+ */
+const TASK_SELECT = `SELECT t.*, g.title AS goal_title,
+  (SELECT COUNT(*) FROM goals g2 WHERE g2.week_start = g.week_start
+     AND (g2.sort_order < g.sort_order OR (g2.sort_order = g.sort_order AND g2.id <= g.id))) AS goal_no
+  FROM tasks t LEFT JOIN goals g ON g.id = t.goal_id`
 /** 미완료(sort_order 순) 다음에 완료(완료 시각 순) */
 const TASK_ORDER = 't.done, CASE WHEN t.done = 0 THEN t.sort_order END, t.done_at, t.id'
 
@@ -41,6 +48,7 @@ const toTask = (r: TaskRow): Task => ({
   carryCount: r.carry_count,
   goalId: r.goal_id,
   goalTitle: r.goal_title,
+  goalNo: r.goal_id === null ? null : r.goal_no,
   source: r.source,
   asanaGid: r.asana_gid,
   syncState: r.sync_state,

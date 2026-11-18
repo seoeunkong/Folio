@@ -26,6 +26,15 @@ export function Settings() {
             ))}
           </div>
         </div>
+        <label className="field">
+          <input
+            type="checkbox"
+            checked={prefs.showWeekends}
+            onChange={(e) => void window.api.setPrefs({ showWeekends: e.target.checked })}
+          />
+          <span>캘린더에 주말 표시</span>
+        </label>
+        <p className="hint">끄면 월간·주간 화면에 월~금만 보이고, 주말 할 일은 금요일 칸에 개수로 알려 줍니다.</p>
       </section>
       <section>
         <h2 className="section-label">위젯</h2>
