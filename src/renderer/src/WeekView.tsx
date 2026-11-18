@@ -134,7 +134,7 @@ function ThemeLine({ week }: { week: Week }) {
       </button>
     </p>
   ) : (
-    <p className="theme-line-week">
+    <p className="theme-line-week" data-empty>
       <button className="link" onClick={() => setEditing(true)}>
         + 이번 주 테마
       </button>

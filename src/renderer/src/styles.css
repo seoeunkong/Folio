@@ -59,10 +59,8 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 /* ── 타이포그래피 ─────────────────────────── */
 .display { font-family: var(--serif); font-weight: 400; letter-spacing: -0.01em; line-height: 1.1; }
 .num { font-variant-numeric: tabular-nums; }
-.section-label {
-  font: 600 11px/1 var(--sans); letter-spacing: 0.08em; color: var(--muted);
-  margin: 0 0 14px; padding-top: 14px; border-top: 1px solid var(--line-strong);
-}
+/* 섹션 라벨은 선 없이 글자(굵기·자간·회색)로만 구분한다. 섹션 사이 선이 필요하면 각 화면에서 준다. */
+.section-label { font: 600 11px/1 var(--sans); letter-spacing: 0.08em; color: var(--muted); margin: 0 0 14px; }
 .muted { color: var(--muted); }
 .spacer { flex: 1; }
 .tag { font-size: 11px; color: var(--muted); white-space: nowrap; }
@@ -156,8 +154,8 @@ body[data-view='widget'] { border: 1px solid var(--line); overflow: hidden; }
 .widget-head .weekday { color: var(--muted); }
 .widget-head .count { font-size: 12px; }
 .theme-line {
-  margin: 0; padding: 7px 14px; font: 13px/1.4 var(--serif); color: var(--fg-2);
-  border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin: 0; padding: 8px 14px 6px; font: 13px/1.4 var(--serif); color: var(--fg-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .widget-body { flex: 1; overflow-y: auto; }
 .widget-foot { flex: none; }
@@ -261,14 +259,17 @@ body[data-view='widget'] { border: 1px solid var(--line); overflow: hidden; }
 .theme-line-week:hover .reveal, .goal-row:hover .reveal, .goal-row:focus-within .reveal { visibility: visible; }
 .week-summary { align-self: center; font-size: 12px; color: var(--muted); white-space: nowrap; }
 .week-summary b { color: var(--fg); font-weight: 600; }
-.theme-line-week { display: flex; align-items: baseline; gap: 12px; margin: 14px 0 0; min-height: 26px; }
+.theme-line-week { display: flex; align-items: baseline; gap: 12px; margin: 18px 0 0; min-height: 26px; }
+.theme-line-week[data-empty] { margin-top: 10px; min-height: 0; font-size: 12px; }
 .theme-text { font: 17px/1.4 var(--serif); color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .theme-edit {
   display: block; width: 100%; margin: 14px 0 0; padding: 0 0 4px; border: 0; border-bottom: 1px solid var(--line-strong);
   background: transparent; font: 17px/1.4 var(--serif); outline: none; user-select: text;
 }
-.goals { margin-top: 30px; }
-.goal-row { display: grid; grid-template-columns: 44px minmax(0, 1fr); padding: 14px 0 16px; border-bottom: 1px solid var(--line); background: var(--bg); position: relative; }
+.goals { margin-top: 36px; }
+.theme-line-week[data-empty] + .goals { margin-top: 28px; }
+.goal-row { display: grid; grid-template-columns: 44px minmax(0, 1fr); padding: 14px 0 16px; background: var(--bg); position: relative; }
+.goal-row + .goal-row { border-top: 1px solid var(--line); }
 .goal-row[data-dragging] { z-index: 1; background: var(--bg-soft); }
 .goal-row:first-child { padding-top: 4px; }
 .goal-no { font-size: 20px; color: var(--accent); cursor: grab; align-self: start; touch-action: none; }
@@ -282,8 +283,9 @@ body[data-view='widget'] { border: 1px solid var(--line); overflow: hidden; }
 .goal-row .progress { font-size: 12px; color: var(--muted); white-space: nowrap; }
 .goal-row .progress .num { color: var(--fg); }
 .goal-row ul { max-width: 560px; }
-.goal-row .link-task { margin-top: 6px; color: var(--muted); }
-.add-goal { display: flex; gap: 14px; align-items: center; margin-top: 14px; padding-left: 44px; }
+.goal-row .link-task { margin-top: 6px; color: var(--muted); border-bottom-color: transparent; cursor: pointer; }
+.goal-row .link-task:hover, .goal-row .link-task:focus { color: var(--fg); border-bottom-color: var(--line); }
+.add-goal { display: flex; gap: 14px; align-items: center; margin-top: 10px; padding-left: 44px; }
 .add-goal input { flex: 1; }
 .mini-task { display: flex; align-items: flex-start; gap: 8px; padding: 4px 0; font-size: 13px; line-height: 1.45; color: var(--fg); }
 .mini-task .check { margin-top: 3px; width: 13px; height: 13px; }
@@ -298,7 +300,7 @@ body[data-view='widget'] { border: 1px solid var(--line); overflow: hidden; }
 .days { display: grid; grid-template-columns: repeat(var(--cols, 7), minmax(0, 1fr)); margin-top: 44px; border-top: 1px solid var(--line-strong); }
 .day-col { border-right: 1px solid var(--line); min-height: 180px; padding: 8px 12px 12px; }
 .day-col:last-child { border-right: 0; }
-.day-col header { display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; font-size: 13px; padding-bottom: 8px; margin-bottom: 6px; border-bottom: 1px solid var(--line); }
+.day-col header { display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; font-size: 13px; padding: 2px 0 6px; margin-bottom: 4px; }
 .day-col .weekday { color: var(--muted); }
 .day-col .add-day { margin-left: auto; width: 20px; height: 20px; font-size: 15px; visibility: hidden; }
 .day-col:hover .add-day, .day-col:focus-within .add-day { visibility: visible; }
@@ -314,7 +316,8 @@ body[data-view='widget'] { border: 1px solid var(--line); overflow: hidden; }
 
 /* ── 설정 ─────────────────────────────────── */
 .settings { max-width: 620px; }
-.settings section { margin-bottom: 44px; }
+.settings section { margin-bottom: 30px; }
+.settings section + section { padding-top: 26px; border-top: 1px solid var(--line); }
 .field { display: flex; align-items: center; gap: 12px; padding: 7px 0; }
 .field input[type='range'] { width: 200px; accent-color: var(--fg); }
 .field input[type='checkbox'] { accent-color: var(--fg); }
