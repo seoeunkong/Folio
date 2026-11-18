@@ -32,7 +32,7 @@ npm run dev        # 개발 실행 (실제 데이터 %APPDATA%\Folio\data.db 사
 npm test           # 이월·정렬·목표 규칙 테스트
 npm run smoke      # 임시 데이터로 앱을 띄워 IPC 확인 + 화면 캡처(smoke-out/)
 npm run icon       # resources/icon.png 다시 만들기
-npm run dist       # 설치 파일 dist\Folio Setup <버전>.exe
+npm run dist       # 설치 파일 dist\Folio-Setup-<버전>.exe (로컬 빌드, 게시하지 않음)
 ```
 
 `FOLIO_USER_DATA=<폴더>`를 주면 실제 데이터 대신 그 폴더를 씁니다.
