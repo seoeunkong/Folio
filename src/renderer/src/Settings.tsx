@@ -100,7 +100,9 @@ function HolidayManager() {
     <section>
       <h2 className="section-label">휴일 관리</h2>
       <p className="hint">
-        토·일요일과 여기 있는 날은 평일에서 빠지고, 미완료 할 일은 다음 평일로 이월됩니다. 전사 휴일과 임시공휴일을 추가하세요.
+        토·일요일과 여기 있는 날은 평일에서 빠지고, 미완료 할 일은 다음 평일로 이월됩니다.
+        <br />
+        전사 휴일과 임시공휴일을 추가하세요.
       </p>
       <div className="holiday-form">
         <input className="line-input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />

@@ -173,7 +173,11 @@ export function MonthView({ onOpenWeek }: { onOpenWeek: (weekStart: Ymd) => void
               )
             })}
           </div>
-          <p className="hint">할 일을 달력의 날짜 칸으로 끌어 놓으면 그날로 옮겨집니다. 지난 날짜로는 옮길 수 없습니다.</p>
+          <p className="hint">
+            할 일을 달력의 날짜 칸으로 끌어 놓으면 그날로 옮겨집니다.
+            <br />
+            지난 날짜로는 옮길 수 없습니다.
+          </p>
         </section>
 
         <section className="day-panel">
