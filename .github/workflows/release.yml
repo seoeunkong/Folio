@@ -13,9 +13,9 @@ jobs:
   release:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24 # node:sqlite를 쓰는 테스트가 Node 22.13+를 요구한다
           cache: npm
