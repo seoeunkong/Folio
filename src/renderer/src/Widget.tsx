@@ -21,7 +21,7 @@ export function Widget() {
   return (
     <div className="widget">
       <header className="widget-head" onDoubleClick={() => void window.api.setPrefs({ widgetCollapsed: !prefs.widgetCollapsed })}>
-        <span className="mono date">{md}</span>
+        <span className="display date">{md}</span>
         <span className="weekday">{weekday}</span>
         {holiday && <span className="tag">{holiday.name}</span>}
         {prefs.widgetCollapsed && <span className="muted count">{left}개 남음</span>}

@@ -108,7 +108,7 @@ export class Windows {
       height: 720,
       minWidth: 860,
       minHeight: 420,
-      title: 'TodoCalendar',
+      title: 'Folio',
       icon,
       autoHideMenuBar: true,
       show: false,

@@ -7,7 +7,7 @@ const { tmpdir } = require('node:os')
 
 const outDir = resolve(process.argv[2] ?? 'smoke-out')
 mkdirSync(outDir, { recursive: true })
-process.env.TODOCAL_USER_DATA = mkdtempSync(join(tmpdir(), 'todocal-smoke-'))
+process.env.FOLIO_USER_DATA = mkdtempSync(join(tmpdir(), 'folio-smoke-'))
 require('../out/main/index.js')
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))

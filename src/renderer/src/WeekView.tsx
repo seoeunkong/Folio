@@ -26,7 +26,7 @@ export function WeekView() {
         <button className="icon nav" onClick={() => setWs(addDays(ws, -7))} aria-label="지난 주">
           ◀
         </button>
-        <h2 className="mono">
+        <h2 className="display">
           {formatDay(ws).md} – {formatDay(days[6]).md}
         </h2>
         <button className="icon nav" onClick={() => setWs(addDays(ws, 7))} aria-label="다음 주">
@@ -42,13 +42,13 @@ export function WeekView() {
       <ThemeInput key={ws} week={week} />
 
       <section className="goals">
-        <h3 className="mono">목표</h3>
+        <h3 className="section-label">목표</h3>
         {week.goals.length === 0 && <p className="hint">이번 주에 이루고 싶은 것을 2~3개 정해 보세요.</p>}
-        <div className="goal-grid">
-          {week.goals.map((g) => (
-            <GoalCard key={g.id} goal={g} weekTasks={tasks} />
+        <ol className="goal-list">
+          {week.goals.map((g, i) => (
+            <GoalRow key={g.id} index={i} goal={g} weekTasks={tasks} />
           ))}
-        </div>
+        </ol>
         <AddGoal weekStart={ws} />
       </section>
 
@@ -59,7 +59,7 @@ export function WeekView() {
           return (
             <div key={d} className="day-col" data-today={d === today || undefined} data-off={holidayOf.has(d) || undefined}>
               <header>
-                <span className="weekday">{weekday}</span> <span className="mono">{md}</span>
+                <span className="weekday">{weekday}</span> <span className="num">{md}</span>
                 {holidayOf.get(d) && <span className="hname">{holidayOf.get(d)!.name}</span>}
               </header>
               <ul>
@@ -90,7 +90,7 @@ function ThemeInput({ week }: { week: Week }) {
   )
 }
 
-function GoalCard({ goal, weekTasks }: { goal: Goal & { tasks: Task[] }; weekTasks: Task[] }) {
+function GoalRow({ index, goal, weekTasks }: { index: number; goal: Goal & { tasks: Task[] }; weekTasks: Task[] }) {
   const [title, setTitle] = useState(goal.title)
   useEffect(() => setTitle(goal.title), [goal.title])
 
@@ -100,7 +100,9 @@ function GoalCard({ goal, weekTasks }: { goal: Goal & { tasks: Task[] }; weekTas
     e.key === 'Enter' && !e.nativeEvent.isComposing && e.currentTarget.blur()
 
   return (
-    <article className="goal-card">
+    <li className="goal-row">
+      <span className="goal-no display">{String(index + 1).padStart(2, '0')}</span>
+      <div className="goal-body">
       <div className="goal-top">
         <input
           className="goal-title"
@@ -112,7 +114,7 @@ function GoalCard({ goal, weekTasks }: { goal: Goal & { tasks: Task[] }; weekTas
             else if (title.trim() !== goal.title) void window.api.updateGoal(goal.id, { title })
           }}
         />
-        <span className="mono progress" title="연결된 할 일 완료/전체">
+        <span className="num progress" title="연결된 할 일 완료/전체">
           {done}/{goal.tasks.length}
         </span>
         <button
@@ -143,7 +145,8 @@ function GoalCard({ goal, weekTasks }: { goal: Goal & { tasks: Task[] }; weekTas
           ))}
         </select>
       )}
-    </article>
+      </div>
+    </li>
   )
 }
 
@@ -156,13 +159,13 @@ function AddGoal({ weekStart }: { weekStart: Ymd }) {
   }
   return (
     <div className="add-goal">
-      <input
+      <input className="line-input"
         placeholder="새 목표"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && add()}
       />
-      <button onClick={add} disabled={!title.trim()}>
+      <button className="primary" onClick={add} disabled={!title.trim()}>
         추가
       </button>
     </div>
@@ -179,7 +182,7 @@ function MiniTask({ task, showDate = false, onUnlink }: { task: Task; showDate?:
         {task.title}
         {!showDate && task.goalTitle && <span className="goal-tag">◆</span>}
       </span>
-      {showDate && <span className="mono date">{formatDay(task.date).md}</span>}
+      {showDate && <span className="num date">{formatDay(task.date).md}</span>}
       {onUnlink && (
         <button className="icon unlink" title="목표 연결 해제" onClick={onUnlink}>
           <CloseIcon />

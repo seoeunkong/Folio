@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import {
   closestCenter,
   DndContext,
@@ -11,7 +11,7 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core'
 import { addDays, dayOfWeek, WEEKDAY_KO, type Ymd } from '../../core/dates'
-import type { DaySummary, Holiday, Task } from '../../shared/types'
+import type { DaySummary, Holiday, Task, Week } from '../../shared/types'
 import { formatDay, useHolidays, useLive, useTasks, useToday } from './hooks'
 import { dropOnTask, TaskList } from './components/TaskList'
 import { QuickAdd } from './components/QuickAdd'
@@ -71,6 +71,8 @@ export function MonthView() {
     () => (from ? window.api.getDaySummaries(from, to) : Promise.resolve([])),
     [from, to],
   )
+  const weekStarts = useMemo(() => cells.filter((_, i) => i % 7 === 0), [cells])
+  const [weeks] = useLive<Week[]>(() => Promise.all(weekStarts.map((ws) => window.api.getWeek(ws))), [from, to])
   const [tasks, setTasks] = useTasks(selected)
   const [dragging, setDragging] = useState<Task | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
@@ -115,7 +117,7 @@ export function MonthView() {
             <button className="icon nav" onClick={() => setMonth(shiftMonth(month, -1))} aria-label="이전 달">
               ◀
             </button>
-            <h2 className="mono">
+            <h2 className="display">
               {y}.{m}
             </h2>
             <button className="icon nav" onClick={() => setMonth(shiftMonth(month, 1))} aria-label="다음 달">
@@ -133,17 +135,22 @@ export function MonthView() {
                 {h}
               </div>
             ))}
-            {cells.map((d) => (
-              <DayCell
-                key={d}
-                date={d}
-                inMonth={d.slice(0, 7) === month}
-                today={today}
-                selected={d === selected}
-                summary={summaryOf.get(d)}
-                holiday={holidayOf.get(d)}
-                onSelect={select}
-              />
+            {weekStarts.map((ws, w) => (
+              <Fragment key={ws}>
+                <WeekStrip week={weeks?.find((x) => x.weekStart === ws)} />
+                {cells.slice(w * 7, w * 7 + 7).map((d) => (
+                  <DayCell
+                    key={d}
+                    date={d}
+                    inMonth={d.slice(0, 7) === month}
+                    today={today}
+                    selected={d === selected}
+                    summary={summaryOf.get(d)}
+                    holiday={holidayOf.get(d)}
+                    onSelect={select}
+                  />
+                ))}
+              </Fragment>
             ))}
           </div>
           <p className="hint">할 일을 달력의 날짜 칸으로 끌어 놓으면 그날로 옮겨집니다. 지난 날짜로는 옮길 수 없습니다.</p>
@@ -151,7 +158,7 @@ export function MonthView() {
 
         <section className="day-panel">
           <header className="panel-head">
-            <span className="mono date">{sel.md}</span>
+            <span className="display date">{sel.md}</span>
             <span className="weekday">{sel.weekday}요일</span>
             {selHoliday && <span className="tag">{selHoliday.name}</span>}
           </header>
@@ -193,10 +200,31 @@ function DayCell({ date, inMonth, today, selected, summary, holiday, onSelect }:
       data-over={(isOver && droppable) || undefined}
       onClick={() => onSelect(date)}
     >
-      <span className="num mono">{Number(date.slice(8))}</span>
+      <span className="day-num display">{Number(date.slice(8))}</span>
       {holiday && <span className="hname">{holiday.name}</span>}
       {summary && <Dots summary={summary} />}
     </button>
+  )
+}
+
+/** 주 위에 걸치는 한 줄: 그 주의 테마와 목표(연결된 할 일 완료/전체). 아무것도 없으면 그리지 않는다. */
+function WeekStrip({ week }: { week: Week | undefined }) {
+  if (!week || (!week.theme && week.goals.length === 0)) return null
+  const full = [week.theme, ...week.goals.map((g) => `${g.title} ${g.tasks.filter((t) => t.done).length}/${g.tasks.length}`)]
+    .filter(Boolean)
+    .join(' · ')
+  return (
+    <div className="week-strip" title={full}>
+      {week.theme && <span className="strip-theme">{week.theme}</span>}
+      {week.goals.map((g) => (
+        <span key={g.id} className="strip-goal">
+          <span className="goal-mark">◆</span> {g.title}{' '}
+          <span className="num">
+            {g.tasks.filter((t) => t.done).length}/{g.tasks.length}
+          </span>
+        </span>
+      ))}
+    </div>
   )
 }
 
@@ -204,7 +232,7 @@ function DayCell({ date, inMonth, today, selected, summary, holiday, onSelect }:
 function Dots({ summary: { total, done } }: { summary: DaySummary }) {
   if (total > 6)
     return (
-      <span className="dots mono" title={`완료 ${done} / 전체 ${total}`}>
+      <span className="dots num" title={`완료 ${done} / 전체 ${total}`}>
         {done}/{total}
       </span>
     )

@@ -1,5 +1,6 @@
 import { app, globalShortcut, ipcMain, Menu, nativeImage, nativeTheme, powerMonitor, Tray } from 'electron'
-import { join } from 'node:path'
+import { copyFileSync, existsSync, mkdirSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import icon from '../../resources/icon.png?asset'
 import { toYmd } from '../core/dates'
 import { API_METHODS, MUTATING_METHODS, type Prefs, type ThemeSource, type TodoApi } from '../shared/types'
@@ -7,19 +8,35 @@ import { getSetting, openDb, setSetting } from './db'
 import { TaskService } from './taskService'
 import { Windows } from './windows'
 
-// DB 위치: %APPDATA%\TodoCalendar\data.db (개발 실행과 설치본이 같은 데이터를 쓴다)
-// TODOCAL_USER_DATA를 주면 그 폴더를 대신 쓴다(실제 데이터를 건드리지 않고 시험할 때).
-app.setPath('userData', process.env.TODOCAL_USER_DATA ?? join(app.getPath('appData'), 'TodoCalendar'))
-app.setAppUserModelId('TodoCalendar')
+// DB 위치: %APPDATA%\Folio\data.db (개발 실행과 설치본이 같은 데이터를 쓴다)
+// FOLIO_USER_DATA를 주면 그 폴더를 대신 쓴다(실제 데이터를 건드리지 않고 시험할 때).
+const testDataDir = process.env.FOLIO_USER_DATA
+app.setPath('userData', testDataDir ?? join(app.getPath('appData'), 'Folio'))
+app.setAppUserModelId('Folio')
 
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) app.quit()
 
 let tray: Tray | null = null // GC로 트레이가 사라지지 않게 붙잡아 둔다
 
+/**
+ * 이전 이름(TodoCalendar) 시절의 DB를 처음 한 번 복사해 온다. 원본은 백업으로 그대로 둔다.
+ * WAL 모드라 -wal/-shm 파일까지 함께 복사해야 마지막 변경이 빠지지 않는다.
+ */
+function importLegacyData(dbPath: string) {
+  const legacyDir = join(app.getPath('appData'), 'TodoCalendar')
+  if (existsSync(dbPath) || !existsSync(join(legacyDir, 'data.db'))) return
+  mkdirSync(dirname(dbPath), { recursive: true })
+  for (const f of ['data.db', 'data.db-wal', 'data.db-shm']) {
+    if (existsSync(join(legacyDir, f))) copyFileSync(join(legacyDir, f), join(dirname(dbPath), f))
+  }
+}
+
 app.whenReady().then(() => {
   if (!gotLock) return
-  const db = openDb(join(app.getPath('userData'), 'data.db'))
+  const dbPath = join(app.getPath('userData'), 'data.db')
+  if (!testDataDir) importLegacyData(dbPath)
+  const db = openDb(dbPath)
   const svc = new TaskService(db)
   const wins = new Windows(db)
 
@@ -107,7 +124,7 @@ app.whenReady().then(() => {
   wins.createWidget()
 
   tray = new Tray(nativeImage.createFromPath(icon).resize({ width: 16, height: 16 }))
-  tray.setToolTip('TodoCalendar')
+  tray.setToolTip('Folio')
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: '위젯 보이기/숨기기', click: () => wins.toggleWidget() },

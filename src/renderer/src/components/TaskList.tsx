@@ -207,7 +207,11 @@ function Row({
         ) : (
           <span className="title" onDoubleClick={startEdit} onClick={withNotes ? onToggleExpand : undefined}>
             {task.title}
-            {task.goalTitle && <span className="goal-tag">◆ {task.goalTitle}</span>}
+            {task.goalTitle && (
+              <span className="goal-tag">
+                <span className="goal-mark">◆</span> {task.goalTitle}
+              </span>
+            )}
             {task.carryCount > 0 && (
               <span className="carry" title={`${task.firstDate}부터 ${task.carryCount}번 이월됨`}>
                 ↻{task.carryCount}

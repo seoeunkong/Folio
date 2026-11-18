@@ -15,7 +15,7 @@ export function Settings() {
   return (
     <div className="settings">
       <section>
-        <h2 className="mono">화면</h2>
+        <h2 className="section-label">화면</h2>
         <div className="field">
           <span>테마</span>
           <div className="segmented">
@@ -28,7 +28,7 @@ export function Settings() {
         </div>
       </section>
       <section>
-        <h2 className="mono">위젯</h2>
+        <h2 className="section-label">위젯</h2>
         <label className="field">
           <span>투명도</span>
           <input
@@ -38,7 +38,7 @@ export function Settings() {
             value={Math.round(prefs.widgetOpacity * 100)}
             onChange={(e) => void window.api.setPrefs({ widgetOpacity: Number(e.target.value) / 100 })}
           />
-          <span className="mono">{Math.round(prefs.widgetOpacity * 100)}%</span>
+          <span className="num">{Math.round(prefs.widgetOpacity * 100)}%</span>
         </label>
         <label className="field">
           <input
@@ -89,19 +89,19 @@ function HolidayManager() {
 
   return (
     <section>
-      <h2 className="mono">휴일 관리</h2>
+      <h2 className="section-label">휴일 관리</h2>
       <p className="hint">
         토·일요일과 여기 있는 날은 평일에서 빠지고, 미완료 할 일은 다음 평일로 이월됩니다. 전사 휴일과 임시공휴일을 추가하세요.
       </p>
       <div className="holiday-form">
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        <input
+        <input className="line-input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        <input className="line-input"
           placeholder="이름 (예: 창립기념일)"
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && void add()}
         />
-        <button onClick={() => void add()} disabled={!date || !name.trim()}>
+        <button className="primary" onClick={() => void add()} disabled={!date || !name.trim()}>
           추가
         </button>
       </div>
@@ -120,11 +120,11 @@ function HolidayManager() {
             .filter((h) => h.date.startsWith(shownYear ?? ''))
             .map((h) => (
               <tr key={h.date} data-past={(today && h.date < today) || undefined}>
-                <td className="mono">{h.date.slice(5).replace('-', '.')}</td>
+                <td className="num">{h.date.slice(5).replace('-', '.')}</td>
                 <td>{WEEKDAY_KO[dayOfWeek(h.date)]}</td>
                 <td>{h.name}</td>
                 <td>
-                  <span className="tag">{h.kind === 'public' ? '공휴일' : '전사'}</span>
+                  {h.kind === 'public' ? '공휴일' : '전사'}
                 </td>
                 <td>
                   <button className="link" onClick={() => void window.api.removeHoliday(h.date)}>

@@ -14,7 +14,7 @@ export function MainWindow() {
   return (
     <div className="main">
       <nav className="side">
-        <h1 className="mono">TodoCalendar</h1>
+        <h1 className="brand">Folio</h1>
         <button data-active={tab === 'today' || undefined} onClick={() => setTab('today')}>
           오늘
         </button>
@@ -65,7 +65,7 @@ function DayView() {
           ◀
         </button>
         <span className="date-jump">
-          <button className="mono" title="날짜로 이동" onClick={() => jumpRef.current?.showPicker()}>
+          <button className="display" title="날짜로 이동" onClick={() => jumpRef.current?.showPicker()}>
             {md}
           </button>
           <input
