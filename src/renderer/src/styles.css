@@ -79,6 +79,8 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .icon { display: inline-grid; place-items: center; width: 24px; height: 24px; color: var(--muted); }
 .icon:hover, .icon[data-on] { color: var(--fg); }
 .goal-mark { color: var(--accent); }
+/* 1em 정사각. 아래 끝을 기준선보다 0.127em 내려 중심(0.373em)이 한글·숫자 잉크의 중심과 맞게 한다. */
+.goal-diamond { display: inline-block; width: 1em; height: 1em; vertical-align: -0.127em; }
 :focus-visible { outline: 1px solid var(--line-strong); outline-offset: -1px; }
 
 .primary { padding: 6px 16px; background: var(--primary-bg); color: var(--primary-fg); font-size: 12px; }
