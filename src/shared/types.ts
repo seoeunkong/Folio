@@ -6,8 +6,6 @@ export interface Task {
   sortOrder: number
   done: boolean
   doneAt: string | null
-  firstDate: string
-  carryCount: number
   goalId: number | null
   /** 연결된 목표의 제목(목록에 바로 표시하려고 함께 가져온다) */
   goalTitle: string | null

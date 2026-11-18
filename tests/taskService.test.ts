@@ -24,16 +24,10 @@ describe('자동 이월', () => {
     expect(svc.runRollover('2026-11-22')).toBe(3)
     expect(titles('2026-11-23')).toEqual(['목1', '목2', '금1', '월-기존'])
     expect(titles('2026-11-20')).toEqual(['금-완료'])
-    const moved = svc.listTasks('2026-11-23').filter((t) => t.title !== '월-기존')
-    expect(moved.map((t) => [t.carryCount, t.firstDate])).toEqual([
-      [1, '2026-11-19'],
-      [1, '2026-11-19'],
-      [1, '2026-11-20'],
-    ])
 
     // 같은 날 다시 실행해도 그대로
     expect(svc.runRollover('2026-11-22')).toBe(0)
-    expect(svc.listTasks('2026-11-23').map((t) => t.carryCount)).toEqual([1, 1, 1, 0])
+    expect(titles('2026-11-23')).toEqual(['목1', '목2', '금1', '월-기존'])
   })
 })
 
@@ -74,7 +68,7 @@ describe('목표 순서 바꾸기', () => {
 })
 
 describe('다른 날짜로 옮기기', () => {
-  it('그날 미완료 맨 아래로 가고 이월 횟수는 그대로이며, 지난 날짜로는 옮기지 않는다', () => {
+  it('그날 미완료 맨 아래로 가고, 지난 날짜로는 옮기지 않는다', () => {
     const { svc, titles } = setup()
     const a = svc.addTask('2026-11-18', 'A')
     svc.addTask('2026-11-20', '금1')
@@ -82,7 +76,6 @@ describe('다른 날짜로 옮기기', () => {
 
     svc.moveTaskToDate(a.id, '2026-11-20', '2026-11-18')
     expect(titles('2026-11-20')).toEqual(['금1', 'A', '금-완료'])
-    expect(svc.getTask(a.id)!.carryCount).toBe(0)
     expect(svc.daySummaries('2026-11-18', '2026-11-20')).toEqual([{ date: '2026-11-20', total: 3, done: 1 }])
 
     expect(() => svc.moveTaskToDate(a.id, '2026-11-17', '2026-11-18')).toThrow()

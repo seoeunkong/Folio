@@ -247,11 +247,6 @@ function Row({
                 <GoalMark no={goalNumbers ? task.goalNo : null} /> {task.goalTitle}
               </span>
             )}
-            {task.carryCount > 0 && (
-              <span className="carry" title={`${task.firstDate}부터 ${task.carryCount}번 이월됨`}>
-                ↻{task.carryCount}
-              </span>
-            )}
           </span>
         )}
 

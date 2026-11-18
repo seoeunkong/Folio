@@ -13,8 +13,6 @@ interface TaskRow {
   sort_order: number
   done: number
   done_at: string | null
-  first_date: string
-  carry_count: number
   goal_id: number | null
   goal_title: string | null
   goal_no: number | null
@@ -44,8 +42,6 @@ const toTask = (r: TaskRow): Task => ({
   sortOrder: r.sort_order,
   done: r.done === 1,
   doneAt: r.done_at,
-  firstDate: r.first_date,
-  carryCount: r.carry_count,
   goalId: r.goal_id,
   goalTitle: r.goal_title,
   goalNo: r.goal_id === null ? null : r.goal_no,
@@ -144,8 +140,8 @@ export class TaskService {
   }
 
   /**
-   * 다른 날짜로 옮긴다(월 달력 끌어 놓기). 그날 미완료 목록의 맨 아래로 가며, 직접 옮긴 것이므로 이월 횟수는 그대로다.
-   * 지난 날짜로는 옮기지 않는다(다음 이월 때 바로 밀려나 이월 횟수만 올라간다). 완료한 할 일은 기록으로 남긴다.
+   * 다른 날짜로 옮긴다(월 달력 끌어 놓기). 그날 미완료 목록의 맨 아래로 간다.
+   * 지난 날짜로는 옮기지 않는다(다음 이월 때 바로 다시 밀려난다). 완료한 할 일은 기록으로 남긴다.
    */
   moveTaskToDate(id: number, date: Ymd, today: Ymd) {
     if (date < today) throw new Error('지난 날짜로는 옮길 수 없습니다')
@@ -260,7 +256,7 @@ export class TaskService {
         .all(today) as unknown as MovingTask[]
       if (overdue.length > 0) {
         const target = nextBusinessDay(today, this.holidayDates())
-        this.applyMoves(overdue, target, true)
+        this.applyMoves(overdue, target)
       }
       setSetting(this.db, 'last_rollover', today)
       return overdue.length
@@ -291,14 +287,14 @@ export class TaskService {
     this.db.prepare('DELETE FROM holidays WHERE date = ?').run(date)
   }
 
-  /** 휴일이 된 날의 미완료 할 일을 다음 평일 맨 위로 옮긴다. 사용자가 미룬 것이 아니므로 이월 횟수는 그대로 둔다. */
+  /** 휴일이 된 날의 미완료 할 일을 다음 평일 맨 위로 옮긴다. */
   moveTasksOffHoliday(date: Ymd): { target: Ymd; moved: number } {
     return transaction(this.db, () => {
       const target = nextBusinessDay(addDays(date, 1), this.holidayDates())
       const moving = this.db
         .prepare('SELECT id, date, sort_order AS sortOrder FROM tasks WHERE done = 0 AND date = ?')
         .all(date) as unknown as MovingTask[]
-      this.applyMoves(moving, target, false)
+      this.applyMoves(moving, target)
       return { target, moved: moving.length }
     })
   }
@@ -327,7 +323,8 @@ export class TaskService {
     return row.v
   }
 
-  private applyMoves(moving: MovingTask[], target: Ymd, countAsCarry: boolean) {
+  /** 자동 이월과 휴일 이동이 함께 쓴다. 날짜와 순서만 바꾼다. */
+  private applyMoves(moving: MovingTask[], target: Ymd) {
     if (moving.length === 0) return
     const ids = new Set(moving.map((m) => m.id))
     // target에 이미 있는 할 일 중 옮기는 대상이 아닌 것의 맨 위 값
@@ -336,10 +333,8 @@ export class TaskService {
       .all(target) as { id: number; v: number }[]
     const mins = existing.filter((r) => !ids.has(r.id)).map((r) => r.v)
     const minOrder = mins.length ? Math.min(...mins) : null
-    const update = this.db.prepare(
-      `UPDATE tasks SET date = ?, sort_order = ?, carry_count = carry_count + ? WHERE id = ?`,
-    )
-    for (const m of stackOnTop(moving, minOrder, target)) update.run(m.date, m.sortOrder, countAsCarry ? 1 : 0, m.id)
+    const update = this.db.prepare('UPDATE tasks SET date = ?, sort_order = ? WHERE id = ?')
+    for (const m of stackOnTop(moving, minOrder, target)) update.run(m.date, m.sortOrder, m.id)
   }
 
   /** 그 날 미완료 목록의 sort_order를 현재 순서대로 0, 1, 2…로 다시 매긴다. */

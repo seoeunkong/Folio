@@ -7,6 +7,9 @@ import { KR_PUBLIC_HOLIDAYS } from '../core/holidaysKR'
  * 스키마 버전별 마이그레이션. PRAGMA user_version에 마지막으로 적용한 번호를 둔다.
  * tasks에는 v0.2(goal_id)·v0.3(source, asana_gid, sync_state) 컬럼을 미리 넣었고,
  * weeks/goals/asana_tasks 테이블은 해당 단계에서 다음 마이그레이션으로 추가한다.
+ *
+ * tasks.carry_count(이월 횟수)는 2026-11-19 기능을 없앤 뒤 읽지도 쓰지도 않는다. 기존 DB와 맞추려고 칸만 남긴다(기본값 0).
+ * tasks.first_date(처음 넣은 날짜)는 화면에서 쓰지 않지만 NOT NULL이라 추가할 때 계속 채운다.
  */
 const MIGRATIONS: string[] = [
   `
