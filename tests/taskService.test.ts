@@ -56,6 +56,23 @@ describe('주간 목표 연결', () => {
   })
 })
 
+describe('목표 순서 바꾸기', () => {
+  it('옮긴 순서가 주간 목록과 할 일의 목표 번호에 함께 반영된다', () => {
+    const { svc } = setup()
+    const [a, b, c] = ['A', 'B', 'C'].map((t) => svc.addGoal('2026-11-16', t))
+    const t = svc.addTask('2026-11-18', '할 일')
+    svc.setTaskGoal(t.id, c.id)
+
+    svc.moveGoal(c.id, null, a.id) // C를 맨 위로
+    expect(svc.getWeek('2026-11-16').goals.map((g) => g.title)).toEqual(['C', 'A', 'B'])
+    expect(svc.getTask(t.id)?.goalNo).toBe(1)
+
+    svc.moveGoal(c.id, b.id, null) // 다시 맨 아래로
+    expect(svc.getWeek('2026-11-16').goals.map((g) => g.title)).toEqual(['A', 'B', 'C'])
+    expect(svc.getTask(t.id)?.goalNo).toBe(3)
+  })
+})
+
 describe('다른 날짜로 옮기기', () => {
   it('그날 미완료 맨 아래로 가고 이월 횟수는 그대로이며, 지난 날짜로는 옮기지 않는다', () => {
     const { svc, titles } = setup()

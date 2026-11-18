@@ -208,6 +208,31 @@ export class TaskService {
     }
   }
 
+  /** 같은 주 목표 안에서 prevId와 nextId 사이로 옮긴다. 할 일 순서(moveTask)와 같은 방식이다. */
+  moveGoal(id: number, prevId: number | null, nextId: number | null) {
+    const get = (gid: number) => this.db.prepare(`${GOAL_SELECT} WHERE id = ?`).get(gid) as unknown as Goal | undefined
+    transaction(this.db, () => {
+      const goal = get(id)
+      if (!goal) return
+      const neighbor = (nid: number | null) => {
+        if (nid === null) return null
+        const n = get(nid)
+        if (!n || n.weekStart !== goal.weekStart) throw new Error('같은 주의 목표 사이로만 옮길 수 있습니다')
+        return n.sortOrder
+      }
+      let prev = neighbor(prevId)
+      let next = neighbor(nextId)
+      if (gapTooSmall(prev, next)) {
+        const ids = this.db.prepare('SELECT id FROM goals WHERE week_start = ? ORDER BY sort_order, id').all(goal.weekStart) as { id: number }[]
+        const update = this.db.prepare('UPDATE goals SET sort_order = ? WHERE id = ?')
+        ids.forEach((r, i) => update.run(i, r.id))
+        prev = prevId === null ? null : get(prevId)!.sortOrder
+        next = nextId === null ? null : get(nextId)!.sortOrder
+      }
+      this.db.prepare('UPDATE goals SET sort_order = ? WHERE id = ?').run(orderBetween(prev, next), id)
+    })
+  }
+
   /** 목표를 지워도 할 일은 남기고 연결만 푼다. */
   deleteGoal(id: number) {
     transaction(this.db, () => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { Fragment, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import {
   closestCenter,
   DndContext,
@@ -14,7 +14,7 @@ import { addDays, dayOfWeek, WEEKDAY_KO, type Ymd } from '../../core/dates'
 import type { DaySummary, Holiday, Task, Week } from '../../shared/types'
 import { formatDay, useHolidays, useLive, usePrefs, useTasks, useToday } from './hooks'
 import { dropOnTask, TaskList } from './components/TaskList'
-import { GoalMark } from './components/GoalMark'
+import { ChevronIcon } from './components/Icons'
 import { QuickAdd } from './components/QuickAdd'
 
 const DAY = 'day:' // 달력 칸 droppable id 접두사. 할 일 id(숫자)와 구분한다.
@@ -54,7 +54,7 @@ const collision: CollisionDetection = (args) => {
   return closestCenter({ ...args, droppableContainers: args.droppableContainers.filter((c) => !String(c.id).startsWith(DAY)) })
 }
 
-export function MonthView() {
+export function MonthView({ onOpenWeek }: { onOpenWeek: (weekStart: Ymd) => void }) {
   const today = useToday()
   const prefs = usePrefs()
   const holidays = useHolidays()
@@ -77,6 +77,8 @@ export function MonthView() {
   const [weeks] = useLive<Week[]>(() => Promise.all(weekStarts.map((ws) => window.api.getWeek(ws))), [from, to])
   const [tasks, setTasks] = useTasks(selected)
   const [dragging, setDragging] = useState<Task | null>(null)
+  /** 목표 목록을 펼친 주(한 번에 한 주만) */
+  const [openWeek, setOpenWeek] = useState<Ymd | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
 
   if (!today || !month || !selected || !prefs) return null
@@ -127,9 +129,11 @@ export function MonthView() {
             <button className="icon nav" onClick={() => setMonth(shiftMonth(month, 1))} aria-label="다음 달">
               ▶
             </button>
+            <span className="spacer" />
+            {/* 월 이동(◀ ▶)과 떨어뜨려 둔다. 이번 달을 보고 있으면 숨기고, 누르면 이번 달로 가서 오늘을 선택한다. */}
             {month !== today.slice(0, 7) && (
-              <button className="link" onClick={() => select(today)}>
-                이번 달
+              <button className="text-btn" onClick={() => select(today)}>
+                이번 달로
               </button>
             )}
           </header>
@@ -144,8 +148,10 @@ export function MonthView() {
               const days = cells.slice(w * 7, w * 7 + 7)
               // 주말을 숨기면 금요일 칸에 주말 할 일 수를 알려 할 일이 보이지 않게 묻히지 않도록 한다
               const weekendCount = showWeekends ? 0 : days.slice(5).reduce((n, d) => n + (summaryOf.get(d)?.total ?? 0), 0)
+              const open = openWeek === ws && hasStrip(week)
               return (
-              <div key={ws} className="week-row" data-cols={cols} data-strip={hasStrip(week) || undefined}>
+              <Fragment key={ws}>
+              <div className="week-row" data-cols={cols} data-strip={hasStrip(week) || undefined}>
                 {days.slice(0, cols).map((d, i) => (
                   <DayCell
                     key={d}
@@ -159,9 +165,11 @@ export function MonthView() {
                     onSelect={select}
                   />
                 ))}
-                {/* 칸 위에 겹쳐 그리는 막대. 클릭·드롭은 아래 칸이 받는다(pointer-events: none). */}
-                <WeekStrip week={week} />
+                {/* 칸 위에 겹쳐 그리는 막대. 누르면 이 주 아래에 목표 목록을 펼친다. 드롭은 아래 칸이 받는다(collision 참고). */}
+                <WeekStrip week={week} open={open} onToggle={() => setOpenWeek(open ? null : ws)} />
               </div>
+              {open && week && <WeekGoals week={week} onOpenWeek={() => onOpenWeek(ws)} />}
+              </Fragment>
               )
             })}
           </div>
@@ -175,7 +183,7 @@ export function MonthView() {
             {selHoliday && <span className="tag">{selHoliday.name}</span>}
           </header>
           <QuickAdd date={selected} today={today} />
-          {tasks && <TaskList tasks={tasks} setTasks={setTasks} bare />}
+          {tasks && <TaskList tasks={tasks} setTasks={setTasks} bare goalNumbers={false} />}
         </section>
       </div>
 
@@ -210,7 +218,9 @@ function DayCell({ date, inMonth, today, selected, summary, holiday, weekendCoun
       data-past={date < today || undefined}
       data-today={date === today || undefined}
       data-selected={selected || undefined}
-      data-off={dow === 0 || dow === 6 || holiday ? true : undefined}
+      data-holiday={holiday ? true : undefined}
+      data-sun={(dow === 0 && !holiday) || undefined}
+      data-off={((dow === 0 || dow === 6) && !holiday) || undefined}
       data-over={(isOver && droppable) || undefined}
       onClick={() => onSelect(date)}
     >
@@ -232,23 +242,65 @@ function DayCell({ date, inMonth, today, selected, summary, holiday, weekendCoun
 
 const hasStrip = (week: Week | undefined) => !!week && (week.theme !== '' || week.goals.length > 0)
 
+const doneOf = (g: Week['goals'][number]) => g.tasks.filter((t) => t.done).length
+
 /**
- * 주 행 안에서 월~금 평일 칸에만 걸쳐 그리는 막대: 그 주의 테마와 목표(연결된 할 일 완료).
- * 여러 날에 걸친 일정처럼 막대가 덮는 칸이 곧 적용 기간이다. 아무것도 없으면 그리지 않는다.
+ * 주 행 안에서 월~금 평일 칸에만 걸쳐 그리는 한 줄 막대: 그 주의 테마와 목표 묶음.
+ * 막대가 덮는 칸이 곧 적용 기간이다. 목표는 번호 없이, 1개면 이름을, 여럿이면 개수와 할 일 진행만 보여 준다.
+ * 한 줄을 넘는 이름은 말줄임하고 전체는 툴팁(title)으로 본다. 아무것도 없으면 그리지 않는다.
  */
-function WeekStrip({ week }: { week: Week | undefined }) {
+function WeekStrip({ week, open, onToggle }: { week: Week | undefined; open: boolean; onToggle: () => void }) {
   if (!week || !hasStrip(week)) return null
+  const { goals } = week
+  const done = goals.reduce((n, g) => n + doneOf(g), 0)
+  const total = goals.reduce((n, g) => n + g.tasks.length, 0)
+  const tip = [week.theme, ...goals.map((g) => `· ${g.title} (${doneOf(g)}/${g.tasks.length})`)].filter(Boolean).join('\n')
   return (
-    <div className="week-strip">
+    <button className="week-strip" title={tip} aria-expanded={open} onClick={onToggle}>
       {week.theme && <span className="strip-theme">{week.theme}</span>}
-      {week.goals.map((g, i) => (
-        <span key={g.id} className="strip-goal" title={`연결된 할 일 ${g.tasks.filter((t) => t.done).length}/${g.tasks.length} 완료`}>
-          <GoalMark no={i + 1} /> {g.title}{' '}
+      {goals.length === 1 && (
+        <span className="strip-goals">
+          <span className="strip-goal-title">{goals[0].title}</span>
           <span className="num">
-            {g.tasks.filter((t) => t.done).length}/{g.tasks.length}
+            {done}/{total}
           </span>
         </span>
-      ))}
+      )}
+      {goals.length > 1 && (
+        <span className="strip-goals">
+          주간 목표 <span className="num">{goals.length}</span>개 · 할 일{' '}
+          <span className="num">
+            {done}/{total}
+          </span>{' '}
+          완료
+        </span>
+      )}
+      <ChevronIcon open={open} />
+    </button>
+  )
+}
+
+/** 막대를 눌렀을 때 그 주 행 바로 아래(날짜 칸 밖)에 펼치는 목표 목록 */
+function WeekGoals({ week, onOpenWeek }: { week: Week; onOpenWeek: () => void }) {
+  return (
+    <div className="week-goals">
+      {week.goals.length === 0 ? (
+        <p className="hint">이 주에는 목표가 없습니다.</p>
+      ) : (
+        <ul>
+          {week.goals.map((g) => (
+            <li key={g.id}>
+              <span className="title">{g.title}</span>
+              <span className="num progress">
+                {doneOf(g)}/{g.tasks.length}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <button className="text-btn" onClick={onOpenWeek}>
+        주간 화면에서 보기 →
+      </button>
     </div>
   )
 }

@@ -20,6 +20,8 @@ interface Props {
   doneOpenByDefault?: boolean
   /** true면 DndContext를 만들지 않는다. 바깥(월 달력)이 드래그를 맡고 dropOnTask로 순서를 바꾼다. */
   bare?: boolean
+  /** false면 목표 표식에서 번호(01)를 뺀다. 번호가 보이지 않는 월간 화면용 */
+  goalNumbers?: boolean
 }
 
 /**
@@ -41,7 +43,7 @@ export function dropOnTask(tasks: Task[], setTasks: Props['setTasks'], activeId:
   reorderTask(tasks, setTasks, activeId, tasks.filter((t) => !t.done).findIndex((t) => t.id === overId))
 }
 
-export function TaskList({ tasks, setTasks, withNotes = false, doneOpenByDefault = false, bare = false }: Props) {
+export function TaskList({ tasks, setTasks, withNotes = false, doneOpenByDefault = false, bare = false, goalNumbers = true }: Props) {
   const [doneOpen, setDoneOpen] = useState(doneOpenByDefault)
   const [expanded, setExpanded] = useState<number | null>(null)
   // 방금 체크해 제자리에 잠깐 남겨 둔 할 일: id → 체크할 때 미완료 목록에서의 위치
@@ -96,6 +98,7 @@ export function TaskList({ tasks, setTasks, withNotes = false, doneOpenByDefault
   const rowProps = (t: Task) => ({
     task: t,
     withNotes,
+    goalNumbers,
     expanded: expanded === t.id,
     onToggleExpand: () => setExpanded(expanded === t.id ? null : t.id),
     onToggleDone: () => toggleDone(t),
@@ -142,6 +145,7 @@ export function TaskList({ tasks, setTasks, withNotes = false, doneOpenByDefault
 interface RowProps {
   task: Task
   withNotes: boolean
+  goalNumbers: boolean
   expanded: boolean
   onToggleExpand?: () => void
   onToggleDone: () => void
@@ -173,6 +177,7 @@ function SortableRow(props: RowProps) {
 function Row({
   task,
   withNotes,
+  goalNumbers,
   expanded,
   onToggleExpand,
   onToggleDone,
@@ -238,8 +243,8 @@ function Row({
           <span className="title" onDoubleClick={startEdit} onClick={withNotes ? onToggleExpand : undefined}>
             {task.title}
             {task.goalTitle && (
-              <span className="goal-tag">
-                <GoalMark no={task.goalNo} /> {task.goalTitle}
+              <span className="goal-tag" title={task.goalTitle}>
+                <GoalMark no={goalNumbers ? task.goalNo : null} /> {task.goalTitle}
               </span>
             )}
             {task.carryCount > 0 && (

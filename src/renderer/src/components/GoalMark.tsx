@@ -4,7 +4,7 @@ export const goalNoText = (no: number | null) => (no === null ? '' : String(no).
 export function GoalMark({ no, title }: { no: number | null; title?: string | null }) {
   return (
     <span className="goal-mark" title={title ? `목표 ${goalNoText(no)} · ${title}` : undefined}>
-      ◆&nbsp;{goalNoText(no)}
+      ◆{no !== null && <>&nbsp;{goalNoText(no)}</>}
     </span>
   )
 }

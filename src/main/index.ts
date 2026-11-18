@@ -104,6 +104,7 @@ app.whenReady().then(() => {
     addGoal: async (weekStart, title) => void svc.addGoal(weekStart, title),
     updateGoal: async (id, patch) => svc.updateGoal(id, patch),
     deleteGoal: async (id) => svc.deleteGoal(id),
+    moveGoal: async (id, prevId, nextId) => svc.moveGoal(id, prevId, nextId),
     setTaskGoal: async (taskId, goalId) => svc.setTaskGoal(taskId, goalId),
     listHolidays: async () => svc.listHolidays(),
     addHoliday: async (date, name) => svc.addHoliday(date, name, 'company', today),

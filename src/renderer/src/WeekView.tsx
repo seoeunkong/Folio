@@ -1,22 +1,27 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
-import { addDays, weekStartOf, type Ymd } from '../../core/dates'
+import { closestCenter, DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { addDays, dayOfWeek, weekStartOf, type Ymd } from '../../core/dates'
 import type { Goal, Task, Week } from '../../shared/types'
-import { formatDay, useHolidays, useLive, usePrefs, useToday, useWeek } from './hooks'
+import { formatDay, useHolidays, useLive, usePrefs, useToday } from './hooks'
+import { restrictToParent } from './components/dndModifiers'
 import { CheckIcon, CloseIcon } from './components/Icons'
 import { GoalMark, goalNoText } from './components/GoalMark'
 
-const enter = (e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && !e.nativeEvent.isComposing
+const enter = (e: KeyboardEvent<HTMLElement>) => e.key === 'Enter' && !e.nativeEvent.isComposing
 
-/** 이번 주 테마·진행 현황, 번호 붙은 목표와 연결된 할 일, 날짜별 열 */
-export function WeekView() {
+/** 이번 주 테마·진행 현황, 번호 붙은 목표와 연결된 할 일, 날짜별 열. initialWeek가 있으면 그 주(월요일)부터 연다. */
+export function WeekView({ initialWeek }: { initialWeek?: Ymd }) {
   const today = useToday()
   const prefs = usePrefs()
   const holidays = useHolidays()
   const [ws, setWs] = useState<Ymd>()
   useEffect(() => {
-    if (today && !ws) setWs(weekStartOf(today))
-  }, [today, ws])
-  const week = useWeek(ws)
+    if (today && !ws) setWs(initialWeek ?? weekStartOf(today))
+  }, [today, ws, initialWeek])
+  const [week, setWeek] = useLive<Week | undefined>(() => (ws ? window.api.getWeek(ws) : Promise.resolve(undefined)), [ws])
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
   const [tasks] = useLive<Task[]>(() => (ws ? window.api.listTasksRange(ws, addDays(ws, 6)) : Promise.resolve([])), [ws])
   if (!today || !ws || !week || !tasks || !prefs) return null
 
@@ -25,6 +30,16 @@ export function WeekView() {
   const holidayOf = new Map(holidays.map((h) => [h.date, h]))
   const isThisWeek = ws === weekStartOf(today)
   const doneCount = tasks.filter((t) => t.done).length
+
+  /** 목표를 끌어 우선순위를 바꾼다. 화면은 먼저 바꾸고(깜박임 방지) 메인에는 이웃 id만 보낸다. */
+  const onGoalDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return
+    const from = week.goals.findIndex((g) => g.id === active.id)
+    const to = week.goals.findIndex((g) => g.id === over.id)
+    const next = arrayMove(week.goals, from, to)
+    setWeek({ ...week, goals: next })
+    void window.api.moveGoal(Number(active.id), next[to - 1]?.id ?? null, next[to + 1]?.id ?? null)
+  }
 
   return (
     <div className="week">
@@ -38,16 +53,17 @@ export function WeekView() {
         <button className="icon nav" onClick={() => setWs(addDays(ws, 7))} aria-label="다음 주">
           ▶
         </button>
-        {!isThisWeek && (
-          <button className="link" onClick={() => setWs(weekStartOf(today))}>
-            이번 주
-          </button>
-        )}
         <span className="spacer" />
         <span className="week-summary">
           할 일 <b className="num">{doneCount}</b>
           <span className="num">/{tasks.length}</span> 완료 · 목표 <span className="num">{week.goals.length}</span>개
         </span>
+        {/* 주 이동(◀ ▶)과 떨어뜨려 둔다. 이번 주를 보고 있으면 숨긴다. */}
+        {!isThisWeek && (
+          <button className="text-btn" onClick={() => setWs(weekStartOf(today))}>
+            이번 주로
+          </button>
+        )}
       </header>
 
       <ThemeLine key={ws} week={week} />
@@ -55,11 +71,15 @@ export function WeekView() {
       <section className="goals">
         <h3 className="section-label">목표</h3>
         {week.goals.length === 0 && <p className="hint">이번 주에 이루고 싶은 것을 2~3개 정해 보세요.</p>}
-        <ol className="goal-list">
-          {week.goals.map((g, i) => (
-            <GoalRow key={g.id} no={i + 1} goal={g} weekTasks={tasks} />
-          ))}
-        </ol>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToParent]} onDragEnd={onGoalDragEnd}>
+          <SortableContext items={week.goals.map((g) => g.id)} strategy={verticalListSortingStrategy}>
+            <ol className="goal-list">
+              {week.goals.map((g, i) => (
+                <GoalRow key={g.id} no={i + 1} goal={g} weekTasks={tasks} />
+              ))}
+            </ol>
+          </SortableContext>
+        </DndContext>
         <AddGoal weekStart={ws} />
       </section>
 
@@ -128,17 +148,33 @@ function GoalRow({ no, goal, weekTasks }: { no: number; goal: Goal & { tasks: Ta
 
   const done = goal.tasks.filter((t) => t.done).length
   const linkable = weekTasks.filter((t) => t.goalId !== goal.id && !t.done)
+  // 번호(01)를 손잡이로 끌어 순서를 바꾼다. 제목 입력·선택 상자에서는 드래그가 시작되지 않는다.
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: goal.id })
 
   return (
-    <li className="goal-row">
-      <span className="goal-no display">{goalNoText(no)}</span>
+    <li
+      ref={setNodeRef}
+      className="goal-row"
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+      data-dragging={isDragging || undefined}
+    >
+      <span ref={setActivatorNodeRef} className="goal-no display" title="끌어서 순서 바꾸기" {...attributes} {...listeners}>
+        {goalNoText(no)}
+      </span>
       <div className="goal-body">
         <div className="goal-top">
-          <input
+          {/* 긴 목표도 자르지 않고 줄바꿈해 모두 보여 준다(내용만큼 높이가 늘어나는 textarea). 줄바꿈 문자는 넣지 않는다. */}
+          <textarea
             className="goal-title"
+            rows={1}
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onKeyDown={(e) => enter(e) && e.currentTarget.blur()}
+            onChange={(e) => setTitle(e.target.value.replace(/\n/g, ' '))}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                if (!e.nativeEvent.isComposing) e.currentTarget.blur()
+              }
+            }}
             onBlur={() => {
               if (!title.trim()) setTitle(goal.title)
               else if (title.trim() !== goal.title) void window.api.updateGoal(goal.id, { title })
@@ -224,7 +260,12 @@ function DayColumn({
     inputRef.current?.focus()
   }
   return (
-    <div className="day-col" data-today={date === today || undefined} data-off={holidayName ? true : undefined}>
+    <div
+      className="day-col"
+      data-today={date === today || undefined}
+      data-holiday={holidayName ? true : undefined}
+      data-sun={(dayOfWeek(date) === 0 && !holidayName) || undefined}
+    >
       <header>
         <span className="weekday">{weekday}</span> <span className="num">{md}</span>
         <button className="icon add-day" title={`${md}에 할 일 추가`} onClick={() => setAdding(true)}>

@@ -85,6 +85,8 @@ export interface TodoApi {
   addGoal(weekStart: string, title: string): Promise<void>
   updateGoal(id: number, patch: GoalPatch): Promise<void>
   deleteGoal(id: number): Promise<void>
+  /** 같은 주 목표 안에서 prevId와 nextId 사이로 옮긴다(null이면 맨 위/맨 아래). 순서가 곧 우선순위·번호다. */
+  moveGoal(id: number, prevId: number | null, nextId: number | null): Promise<void>
   setTaskGoal(taskId: number, goalId: number | null): Promise<void>
   listHolidays(): Promise<Holiday[]>
   /** 반환값은 그날의 미완료 할 일 수(오늘 이후 날짜일 때만). 0보다 크면 화면이 옮길지 묻는다. */
@@ -102,7 +104,7 @@ export interface TodoApi {
 export const API_METHODS = [
   'getToday', 'getNotice', 'listTasks', 'addTask', 'updateTask', 'deleteTask', 'setDone', 'moveTask',
   'moveTaskToDate', 'getDaySummaries', 'listTasksRange',
-  'getWeek', 'setWeekTheme', 'addGoal', 'updateGoal', 'deleteGoal', 'setTaskGoal', 'listHolidays', 'addHoliday', 'removeHoliday', 'moveTasksOffHoliday',
+  'getWeek', 'setWeekTheme', 'addGoal', 'updateGoal', 'deleteGoal', 'moveGoal', 'setTaskGoal', 'listHolidays', 'addHoliday', 'removeHoliday', 'moveTasksOffHoliday',
   'getPrefs', 'setPrefs', 'openMain', 'hideWidget',
 ] as const satisfies ReadonlyArray<Exclude<keyof TodoApi, 'onChanged'>>
 
@@ -111,6 +113,6 @@ export type ApiMethod = (typeof API_METHODS)[number]
 /** 이 메서드가 성공하면 메인 프로세스가 모든 창에 변경을 알린다. */
 export const MUTATING_METHODS: ReadonlySet<ApiMethod> = new Set<ApiMethod>([
   'addTask', 'updateTask', 'deleteTask', 'setDone', 'moveTask', 'moveTaskToDate',
-  'setWeekTheme', 'addGoal', 'updateGoal', 'deleteGoal', 'setTaskGoal',
+  'setWeekTheme', 'addGoal', 'updateGoal', 'deleteGoal', 'moveGoal', 'setTaskGoal',
   'addHoliday', 'removeHoliday', 'moveTasksOffHoliday', 'setPrefs',
 ])
