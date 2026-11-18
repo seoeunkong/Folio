@@ -39,6 +39,7 @@ const MIGRATIONS: string[] = [
   );
   `,
   // v0.2 주간 목표·테마. review_json/reviewed_at은 v0.4 AI 평가가 쓴다.
+  // goals.success_criteria는 입력을 없앤 뒤 쓰지 않는다(이미 만든 DB와 맞추려고 칸만 남김).
   `
   CREATE TABLE weeks (
     week_start  TEXT PRIMARY KEY,

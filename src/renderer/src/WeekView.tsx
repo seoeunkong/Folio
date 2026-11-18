@@ -92,11 +92,7 @@ function ThemeInput({ week }: { week: Week }) {
 
 function GoalCard({ goal, weekTasks }: { goal: Goal & { tasks: Task[] }; weekTasks: Task[] }) {
   const [title, setTitle] = useState(goal.title)
-  const [criteria, setCriteria] = useState(goal.successCriteria)
-  useEffect(() => {
-    setTitle(goal.title)
-    setCriteria(goal.successCriteria)
-  }, [goal.title, goal.successCriteria])
+  useEffect(() => setTitle(goal.title), [goal.title])
 
   const done = goal.tasks.filter((t) => t.done).length
   const linkable = weekTasks.filter((t) => t.goalId !== goal.id && !t.done)
@@ -127,14 +123,6 @@ function GoalCard({ goal, weekTasks }: { goal: Goal & { tasks: Task[] }; weekTas
           <CloseIcon />
         </button>
       </div>
-      <input
-        className="goal-criteria"
-        placeholder="성공 기준 (예: 금요일까지 팀장 검토 완료)"
-        value={criteria}
-        onChange={(e) => setCriteria(e.target.value)}
-        onKeyDown={blurOnEnter}
-        onBlur={() => criteria.trim() !== goal.successCriteria && void window.api.updateGoal(goal.id, { successCriteria: criteria })}
-      />
       <ul>
         {goal.tasks.map((t) => (
           <MiniTask key={t.id} task={t} showDate onUnlink={() => void window.api.setTaskGoal(t.id, null)} />
@@ -161,18 +149,19 @@ function GoalCard({ goal, weekTasks }: { goal: Goal & { tasks: Task[] }; weekTas
 
 function AddGoal({ weekStart }: { weekStart: Ymd }) {
   const [title, setTitle] = useState('')
-  const [criteria, setCriteria] = useState('')
   const add = () => {
     if (!title.trim()) return
-    void window.api.addGoal(weekStart, title, criteria)
+    void window.api.addGoal(weekStart, title)
     setTitle('')
-    setCriteria('')
   }
-  const onKey = (e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && !e.nativeEvent.isComposing && add()
   return (
     <div className="add-goal">
-      <input placeholder="새 목표" value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={onKey} />
-      <input placeholder="성공 기준 (선택)" value={criteria} onChange={(e) => setCriteria(e.target.value)} onKeyDown={onKey} />
+      <input
+        placeholder="새 목표"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && add()}
+      />
       <button onClick={add} disabled={!title.trim()}>
         추가
       </button>

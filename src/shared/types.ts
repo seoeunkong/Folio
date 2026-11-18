@@ -25,13 +25,11 @@ export interface Goal {
   id: number
   weekStart: string
   title: string
-  successCriteria: string
   sortOrder: number
 }
 
 export interface GoalPatch {
   title?: string
-  successCriteria?: string
 }
 
 export interface Week {
@@ -80,7 +78,7 @@ export interface TodoApi {
   listTasksRange(from: string, to: string): Promise<Task[]>
   getWeek(weekStart: string): Promise<Week>
   setWeekTheme(weekStart: string, theme: string): Promise<void>
-  addGoal(weekStart: string, title: string, successCriteria: string): Promise<void>
+  addGoal(weekStart: string, title: string): Promise<void>
   updateGoal(id: number, patch: GoalPatch): Promise<void>
   deleteGoal(id: number): Promise<void>
   setTaskGoal(taskId: number, goalId: number | null): Promise<void>

@@ -27,8 +27,7 @@ const TASK_SELECT = 'SELECT t.*, g.title AS goal_title FROM tasks t LEFT JOIN go
 /** 미완료(sort_order 순) 다음에 완료(완료 시각 순) */
 const TASK_ORDER = 't.done, CASE WHEN t.done = 0 THEN t.sort_order END, t.done_at, t.id'
 
-const GOAL_SELECT =
-  'SELECT id, week_start AS weekStart, title, success_criteria AS successCriteria, sort_order AS sortOrder FROM goals'
+const GOAL_SELECT = 'SELECT id, week_start AS weekStart, title, sort_order AS sortOrder FROM goals'
 
 const toTask = (r: TaskRow): Task => ({
   id: r.id,
@@ -183,13 +182,13 @@ export class TaskService {
       .run(weekStart, theme.trim())
   }
 
-  addGoal(weekStart: Ymd, title: string, successCriteria: string): Goal {
+  addGoal(weekStart: Ymd, title: string): Goal {
     const t = title.trim()
     if (!t) throw new Error('목표가 비어 있습니다')
     const { v } = this.db.prepare('SELECT MAX(sort_order) AS v FROM goals WHERE week_start = ?').get(weekStart) as { v: number | null }
     const r = this.db
-      .prepare('INSERT INTO goals(week_start, title, success_criteria, sort_order) VALUES (?, ?, ?, ?)')
-      .run(weekStart, t, successCriteria.trim(), orderBetween(v, null))
+      .prepare('INSERT INTO goals(week_start, title, sort_order) VALUES (?, ?, ?)')
+      .run(weekStart, t, orderBetween(v, null))
     return this.db.prepare(`${GOAL_SELECT} WHERE id = ?`).get(Number(r.lastInsertRowid)) as unknown as Goal
   }
 
@@ -199,8 +198,6 @@ export class TaskService {
       if (!t) throw new Error('목표가 비어 있습니다')
       this.db.prepare('UPDATE goals SET title = ? WHERE id = ?').run(t, id)
     }
-    if (patch.successCriteria !== undefined)
-      this.db.prepare('UPDATE goals SET success_criteria = ? WHERE id = ?').run(patch.successCriteria.trim(), id)
   }
 
   /** 목표를 지워도 할 일은 남기고 연결만 푼다. */

@@ -40,7 +40,7 @@ describe('자동 이월', () => {
 describe('주간 목표 연결', () => {
   it('다음 주로 이월돼도 목표 연결이 남고, 목표를 지우면 할 일은 남고 연결만 풀린다', () => {
     const { svc } = setup()
-    const goal = svc.addGoal('2026-11-16', '보고서 마무리', '금요일까지 제출')
+    const goal = svc.addGoal('2026-11-16', '보고서 마무리')
     const t = svc.addTask('2026-11-20', '보고서 초안')
     svc.setTaskGoal(t.id, goal.id)
 
