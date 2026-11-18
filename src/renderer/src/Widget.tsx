@@ -51,7 +51,13 @@ export function Widget() {
 
       {!prefs.widgetCollapsed && (
         <>
-          {week?.theme && <p className="theme-line" title="이번 주 테마">{week.theme}</p>}
+          {/* 테마가 있는 주에만: 'THEME' 라벨 + 문구. 문구가 길면 라벨 오른쪽 칸 안에서 줄바꿈한다. */}
+          {week?.theme && (
+            <p className="theme-line">
+              <span className="theme-label">THEME</span>
+              <span className="theme-words">{week.theme}</span>
+            </p>
+          )}
           {notice && <p className="notice">{notice}</p>}
           <div className="widget-body">{tasks && <TaskList tasks={tasks} setTasks={setTasks} />}</div>
           <footer className="widget-foot">

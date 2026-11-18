@@ -153,10 +153,10 @@ body[data-view='widget'] { border: 1px solid var(--line); overflow: hidden; }
 .widget-head .date { font-size: 21px; }
 .widget-head .weekday { color: var(--muted); }
 .widget-head .count { font-size: 12px; }
-.theme-line {
-  margin: 0; padding: 8px 14px 6px; font: 13px/1.4 var(--serif); color: var(--fg-2);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
+/* 위젯 주간 테마: 작은 회색 라벨(THEME) + 선명한 세리프 문구. 긴 문구는 문구 칸 안에서 단어 단위로 줄바꿈 */
+.theme-line { display: flex; align-items: baseline; gap: 10px; margin: 0; padding: 8px 14px 6px; }
+.theme-label { flex: none; font: 600 10px/1 var(--sans); letter-spacing: 0.08em; color: var(--muted); }
+.theme-words { flex: 1; min-width: 0; font: 13px/1.4 var(--serif); color: var(--fg); word-break: keep-all; overflow-wrap: anywhere; }
 .widget-body { flex: 1; overflow-y: auto; }
 .widget-foot { flex: none; }
 
